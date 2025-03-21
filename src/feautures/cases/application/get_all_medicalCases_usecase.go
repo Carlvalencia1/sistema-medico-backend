@@ -12,13 +12,10 @@ func NewGetAllUseCase(medicalCaseRepository domain.IMedicalCase) *GetAllMedicalC
 	return &GetAllMedicalCaseUseCase{medicalCaseRepository: medicalCaseRepository} 
 }
 
-func (g *GetAllMedicalCaseUseCase) Execute()  {
-
-	/*
-	cajas, err := g.naranjaRepository.GetAll()
+func (g *GetAllMedicalCaseUseCase) Execute()  ([]domain.MedicalCase, error) {
+	medicalCases, err := g.medicalCaseRepository.GetAll()
 	if err != nil {
 		return nil, err
 	}
-	return cajas, nil
-	*/
-	}
+	return medicalCases, nil
+}

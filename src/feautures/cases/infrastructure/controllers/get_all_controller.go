@@ -14,12 +14,10 @@ func NewGetAllController(getAllService *application.GetAllMedicalCaseUseCase) *G
 }
 
 func (c *GetAllMedicalCaseController) GetAll(ctx *gin.Context) {
-	/*
-	fill, err := c.getAllService.Execute()
+	medicalCases, err := c.getAllService.Execute()
 	if err != nil {
-		ctx.JSON(500, gin.H{"error": "Error al obtener los expedientes medicos"})
+		ctx.JSON(500, gin.H{"error": "Error getting MedicalCases"})
 		return
 	}
-	ctx.JSON(200, fill)
-	*/
-	}
+	ctx.JSON(200, medicalCases)
+}

@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"net/http"
+	//"net/http"
 )
 
 func main() {
@@ -14,3 +14,10 @@ func main() {
 
 	r.Run(":8080") // Corre el servidor en el puerto 8080
 }
+/*func main() {
+	dependencies := NewDependencies()
+	if err := dependencies.Run(); err != nil {
+		panic(err)
+	}
+}
+	*/

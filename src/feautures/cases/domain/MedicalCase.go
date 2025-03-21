@@ -1,7 +1,7 @@
 package domain
 
 type MedicalCase struct {
-	IDUsuario      int    `json:"id_usuario"`
+	ID             int    `json:"id"`
 	Nombre         string `json:"nombre"`
 	Apellido       string `json:"apellido"`
 	Edad           int    `json:"edad"`
