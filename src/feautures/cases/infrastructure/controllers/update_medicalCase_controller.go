@@ -30,7 +30,7 @@ func (c *UpdateMedicalCaseController) UpdateMedicalCase(ctx *gin.Context) {
 		return
 	}
 
-	medicalCase.ID = int(id) 
+	medicalCase.IDExpediente = int(id) 
 	UpdateMedicalCase, errUpdate := c.updateMedicalCaseService.Execute(medicalCase)
 	if errUpdate != nil {
 		ctx.JSON(500, gin.H{"error": errUpdate.Error()})
