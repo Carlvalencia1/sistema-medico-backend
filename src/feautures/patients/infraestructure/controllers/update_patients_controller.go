@@ -9,14 +9,14 @@ import (
 )
 
 type UpdatePatientsController struct {
-	updatePatientsUseCaseService *application.UpdatePatientsUseCase
+	updatePatient *application.UpdatePatientsUseCase
 }
 
 func NewUpdatePatientsController(updatePatientsUseCaseService *application.UpdatePatientsUseCase) *UpdatePatientsController {
     return &UpdatePatientsController{updatePatientsUseCaseService}
 }
 
-func (c *UpdatePatientsController) UpdatePatientsUseCase(ctx *gin.Context) {
+func (c *UpdatePatientsController) UpdatePatient(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -31,7 +31,7 @@ func (c *UpdatePatientsController) UpdatePatientsUseCase(ctx *gin.Context) {
 	}
 
 	patient.IDUsuario = int(id)
-	updatePatient, errUpdate := c.updatePatientsUseCaseService.Execute(patient)
+	updatePatient, errUpdate := c.updatePatient.Execute(patient)
 	if errUpdate != nil {
 		ctx.JSON(500, gin.H{"error": errUpdate.Error()})
 		return
