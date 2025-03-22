@@ -24,7 +24,7 @@ func NewMedicalCaseRoutes(engine *gin.Engine, createMedicalCaseController *contr
 }
 
 func (r *MedicalCaseRoutes) SetupRoutes() {
-	medical := r.engine.Group("/medicalcases")
+	medical := r.engine.Group("/medical")
 	{
 		medical.GET("/", r.getAllMedicalCaseController.GetAll)
 		medical.POST("/", r.createMedicalCaseController.Create)
