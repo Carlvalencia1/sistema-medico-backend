@@ -65,7 +65,7 @@ func (m *MySQL) GetById(id int) (domain.Patients, error) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return domain.Patients{}, fmt.Errorf("No se encontró el paciente con ID %d", id)
+			return domain.Patients{}, fmt.Errorf("no se encontró el paciente con ID %d", id)
 		}
 		return domain.Patients{}, err
 	}
@@ -91,7 +91,7 @@ func (m *MySQL) Update(paciente domain.Patients) (domain.Patients, error) {
 	}
 
 	if rowsAffected == 0 {
-		return domain.Patients{}, fmt.Errorf("No se encontró el paciente con ID %d para actualizar", paciente.IDUsuario)
+		return domain.Patients{}, fmt.Errorf("no se encontró el paciente con ID %d para actualizar", paciente.IDUsuario)
 	}
 
 	return paciente, nil
@@ -113,7 +113,7 @@ func (m *MySQL) Delete(id int) error {
 		return err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("No se encontró el paciente con ID %d para borrarlo", id)
+		return fmt.Errorf("no se encontró el paciente con ID %d para borrarlo", id)
 	}
 
 	return nil

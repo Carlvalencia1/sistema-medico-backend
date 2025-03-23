@@ -4,6 +4,8 @@ import (
     "database/sql"
     "errors"
     "smartvitals/src/feautures/cases/domain"
+    "fmt"
+    "time"
 )
 
 type MySQL struct {
@@ -45,9 +47,27 @@ func (m *MySQL) GetAll() ([]domain.MedicalCase, error) {
     var expedientes []domain.MedicalCase
     for rows.Next() {
         var expediente domain.MedicalCase
-        if err := rows.Scan(&expediente.IDExpediente, &expediente.IDUsuario, &expediente.Temperatura, &expediente.Peso, &expediente.Estatura, &expediente.RitmoCardiaco, &expediente.FechaRegistro); err != nil {
+        var fechaRegistroBytes []byte // Para almacenar la fecha como []byte
+
+        if err := rows.Scan(
+            &expediente.IDExpediente,
+            &expediente.IDUsuario,
+            &expediente.Temperatura,
+            &expediente.Peso,
+            &expediente.Estatura,
+            &expediente.RitmoCardiaco,
+            &fechaRegistroBytes,
+        ); err != nil {
             return nil, err
         }
+
+        // Convertir `fechaRegistroBytes` a `time.Time`
+        fechaRegistroStr := string(fechaRegistroBytes)
+        expediente.FechaRegistro, err = time.Parse("2006-01-02 15:04:05", fechaRegistroStr)
+        if err != nil {
+            return nil, fmt.Errorf("error parsing fecha_registro: %w", err)
+        }
+
         expedientes = append(expedientes, expediente)
     }
 
@@ -57,6 +77,7 @@ func (m *MySQL) GetAll() ([]domain.MedicalCase, error) {
 
     return expedientes, nil
 }
+
 
 func (m *MySQL) GetById(id int) (domain.MedicalCase, error) {
     var expediente domain.MedicalCase
