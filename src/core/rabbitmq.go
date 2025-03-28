@@ -1,62 +1,96 @@
 package core
 
 import (
-    "fmt"
-    "log"
-    "os"
+	"fmt"
+	"log"
+	"os"
 
-    amqp "github.com/rabbitmq/amqp091-go"
-    "github.com/joho/godotenv"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type RabbitMQRepository struct {
-    conn *amqp.Connection
-    ch   *amqp.Channel
+type RabbitMQ struct {
+	Conn    *amqp.Connection
+	Channel *amqp.Channel
 }
 
-func init() {
-    if err := godotenv.Load(); err != nil {
-        log.Fatalf("Error al cargar el archivo .env: %v", err)
-    }
+func NewRabbitMQ() (*RabbitMQ, error) {
+	url := os.Getenv("RABBITMQ_URL")
+	if url == "" {
+		return nil, fmt.Errorf("variable de entorno RABBITMQ_URL no definida")
+	}
+
+	// Conectar a RabbitMQ
+	conn, err := amqp.Dial(url)
+	if err != nil {
+		return nil, fmt.Errorf("error conectando a RabbitMQ: %w", err)
+	}
+
+	// Crear canal
+	ch, err := conn.Channel()
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("error creando canal: %w", err)
+	}
+
+	// El exchange amq.topic es un exchange predefinido en RabbitMQ
+	// No necesitamos declararlo
+
+	// Declarar la cola
+	_, err = ch.QueueDeclare(
+		"API2oranges", // nombre de la cola
+		true,          // durable
+		false,         // delete when unused
+		false,         // exclusive
+		false,         // no-wait
+		nil,           // arguments
+	)
+	if err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, fmt.Errorf("error declarando cola: %w", err)
+	}
+
+	// Enlazar la cola al exchange
+	err = ch.QueueBind(
+		"API2oranges", // nombre de la cola
+		"api2.oranges", // routing key
+		"amq.topic",   // exchange
+		false,
+		nil,
+	)
+	if err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, fmt.Errorf("error enlazando cola: %w", err)
+	}
+
+	log.Println("Conexión exitosa con RabbitMQ")
+	return &RabbitMQ{
+		Conn:    conn,
+		Channel: ch,
+	}, nil
 }
 
-func GetChannel() (*RabbitMQRepository, error) {
-    rabbitMQUser := os.Getenv("RABBITMQ_USER")
-    rabbitMQPassword := os.Getenv("RABBITMQ_PASSWORD")
-    rabbitMQHost := os.Getenv("RABBITMQ_HOST")
-    rabbitMQPort := os.Getenv("RABBITMQ_PORT")
-
-    log.Printf("Conectando con las siguientes credenciales: %s:%s@%s:%s", rabbitMQUser, rabbitMQPassword, rabbitMQHost, rabbitMQPort)
-
-    rabbitMQURL := fmt.Sprintf("amqp://%s:%s@%s:%s", rabbitMQUser, rabbitMQPassword, rabbitMQHost, rabbitMQPort)
-
-    conn, err := amqp.Dial(rabbitMQURL)
-    if err != nil {
-        return nil, fmt.Errorf("error al conectar con RabbitMQ: %v", err)
-    }
-
-    ch, err := conn.Channel()
-    if err != nil {
-        return nil, fmt.Errorf("error al abrir un canal: %v", err)
-    }
-
-    return &RabbitMQRepository{ch: ch}, nil
+// PublishMessage publica un mensaje en el exchange especificado
+func (r *RabbitMQ) PublishMessage(routingKey string, body []byte) error {
+	return r.Channel.Publish(
+		"amq.topic", // exchange
+		routingKey,  // routing key
+		false,       // mandatory
+		false,       // immediate
+		amqp.Publishing{
+			ContentType:  "application/json",
+			DeliveryMode: amqp.Persistent,
+			Body:         body,
+		})
 }
 
-func (repo *RabbitMQRepository) Close() {
-    if repo.ch != nil {
-        if err := repo.ch.Close(); err != nil {
-            log.Printf("Error al cerrar el canal: %v", err)
-        } else {
-            log.Println("Canal cerrado")
-        }
-    }
-
-    if repo.conn != nil {
-        if err := repo.conn.Close(); err != nil {
-            log.Printf("Error al cerrar la conexión: %v", err)
-        } else {
-            log.Println("Conexión cerrada")
-        }
-    }
+// Close cierra la conexión y el canal
+func (r *RabbitMQ) Close() {
+	if r.Channel != nil {
+		r.Channel.Close()
+	}
+	if r.Conn != nil {
+		r.Conn.Close()
+	}
 }
