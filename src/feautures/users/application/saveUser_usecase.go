@@ -22,7 +22,7 @@ func (uc *SaveUserUseCase) Run(user *entities.User) (*entities.UserResponse, err
 	if user.Rol == "admin" {
 		existingAdmin, _ := uc.userRepository.GetByUsername("admin") // Buscar si ya hay un admin
 		if existingAdmin != nil {
-			return nil, errors.New("Ya existe un Super Admin en el sistema")
+			return nil, errors.New("ya existe un Super Admin en el sistema")
 		}
 	}
 

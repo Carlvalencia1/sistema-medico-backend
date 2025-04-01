@@ -30,7 +30,7 @@ func (uc *LogInUseCase) Run(userLog *entities.UserLogIn) (*entities.Claims, erro
 	// Verificar la contraseña
 	err = middlewares.VerifyPassword(userLog.Password, user.Password)
 	if err != nil {
-		return nil, errors.New("Credenciales inválidas")
+		return nil, errors.New("redenciales inválidas")
 	}
 
 	// Crear los claims con el rol del usuario

@@ -10,9 +10,7 @@ type GetUserByIDUseCase struct {
 }
 
 func NewGetUserByIDUseCase(userRepository domain.IUser) *GetUserByIDUseCase {
-	return &GetUserByIDUseCase{
-		userRepository: userRepository,
-	}
+	return &GetUserByIDUseCase{userRepository: userRepository}
 }
 
 func (uc *GetUserByIDUseCase) Run(id int32) (*entities.UserResponse, error) {
