@@ -17,25 +17,27 @@ func NewProducer(rabbitMQ *core.RabbitMQ) *Producer {
 	}
 }
 
-func (p *Producer) PublishPatients(patients domain.Patients) error {
+func (p *Producer) PublishPatients(patient domain.Patients) error {
 	// Verificar si rabbitMQ es nil antes de usarlo
 	if p.rabbitMQ == nil {
 		log.Printf("Advertencia: RabbitMQ no está configurado, saltando publicación")
 		return nil // No consideramos esto un error fatal
 	}
 
-	jsonData, err := json.Marshal(patients)
+	// Convertir a JSON
+	jsonData, err := json.Marshal(patient)
 	if err != nil {
-		log.Printf("Error al convertir patients a JSON: %v", err)
+		log.Printf("Error al convertir patient a JSON: %v", err)
 		return err
 	}
 
-	err = p.rabbitMQ.PublishMessage("api2.oranges", jsonData)
+	// Publicar usando la routing key correcta para patients
+	err = p.rabbitMQ.PublishMessage("multi.patients.data", jsonData)
 	if err != nil {
 		log.Printf("Error al publicar en RabbitMQ: %v", err)
 		return err
 	}
 
-	log.Printf("Naranja ID %d publicada exitosamente en RabbitMQ", patients.IDUsuario)
+	log.Printf("Paciente ID %d publicado exitosamente en RabbitMQ", patient.IDUsuario)
 	return nil
 }
