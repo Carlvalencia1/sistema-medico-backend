@@ -13,6 +13,7 @@ type RabbitMQ struct {
 	Channel *amqp.Channel
 }
 
+// NewRabbitMQ establece la conexión con RabbitMQ y configura las colas
 func NewRabbitMQ() (*RabbitMQ, error) {
 	url := os.Getenv("RABBITMQ_URL")
 	if url == "" {
@@ -32,39 +33,36 @@ func NewRabbitMQ() (*RabbitMQ, error) {
 		return nil, fmt.Errorf("error creando canal: %w", err)
 	}
 
-	// El exchange amq.topic es un exchange predefinido en RabbitMQ
-	// No necesitamos declararlo
-
-	// Declarar la cola
+	// Declarar la cola para patients
 	_, err = ch.QueueDeclare(
-		"API2oranges", // nombre de la cola
-		true,          // durable
-		false,         // delete when unused
-		false,         // exclusive
-		false,         // no-wait
-		nil,           // arguments
+		"patients", // Nombre de la cola
+		true,       // Durable
+		false,      // Auto-delete
+		false,      // Exclusive
+		false,      // No-wait
+		nil,        // Arguments
 	)
 	if err != nil {
 		ch.Close()
 		conn.Close()
-		return nil, fmt.Errorf("error declarando cola: %w", err)
+		return nil, fmt.Errorf("error declarando cola patients: %w", err)
 	}
 
-	// Enlazar la cola al exchange
+	// Enlazar la cola "patients" al exchange "amq.topic"
 	err = ch.QueueBind(
-		"API2oranges", // nombre de la cola
-		"api2.oranges", // routing key
-		"amq.topic",   // exchange
+		"patients",            // Nombre de la cola
+		"multi.patients.data", // Routing key
+		"amq.topic",           // Exchange
 		false,
 		nil,
 	)
 	if err != nil {
 		ch.Close()
 		conn.Close()
-		return nil, fmt.Errorf("error enlazando cola: %w", err)
+		return nil, fmt.Errorf("error enlazando cola patients: %w", err)
 	}
 
-	log.Println("Conexión exitosa con RabbitMQ")
+	log.Println("Conexión exitosa con RabbitMQ y configuración de cola patients completada")
 	return &RabbitMQ{
 		Conn:    conn,
 		Channel: ch,
@@ -74,10 +72,10 @@ func NewRabbitMQ() (*RabbitMQ, error) {
 // PublishMessage publica un mensaje en el exchange especificado
 func (r *RabbitMQ) PublishMessage(routingKey string, body []byte) error {
 	return r.Channel.Publish(
-		"amq.topic", // exchange
-		routingKey,  // routing key
-		false,       // mandatory
-		false,       // immediate
+		"amq.topic", // Exchange
+		routingKey,  // Routing key
+		false,       // Mandatory
+		false,       // Immediate
 		amqp.Publishing{
 			ContentType:  "application/json",
 			DeliveryMode: amqp.Persistent,
