@@ -1,6 +1,7 @@
 package infraestructure
 
 import (
+	"errors"
 	"database/sql"
     "smartvitals/src/feautures/users/domain/entities"
 )
@@ -132,14 +133,31 @@ func (mysql *MYSQL) GetByID(id int32) (*entities.UserResponse, error) {
 }
 
 func (mysql *MYSQL) GetByUsername(username string) (*entities.UserResponse, error) {
-	var user entities.UserResponse
+    var user entities.UserResponse
 
-	err := mysql.db.QueryRow("SELECT id, name, rol, email, username FROM users WHERE username = ?", username).
-		Scan(&user.ID, &user.Name, &user.Rol, &user.Email, &user.Username)
+    err := mysql.db.QueryRow("SELECT id, name, rol, email, username FROM users WHERE username = ?", username).
+        Scan(&user.ID, &user.Name, &user.Rol, &user.Email, &user.Username)
 
-	if err != nil {
-		return nil, err
-	}
+    if err != nil {
+        return nil, err
+    }
 
-	return &user, nil
+    return &user, nil
+}
+
+func (mysql *MYSQL) GetAdmin() (*entities.UserResponse, error) {
+    var user entities.UserResponse
+
+    // Consulta para obtener el usuario con rol "admin"
+    err := mysql.db.QueryRow("SELECT id, name, rol, email, username FROM users WHERE rol = 'admin' LIMIT 1").
+        Scan(&user.ID, &user.Name, &user.Rol, &user.Email, &user.Username)
+
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return nil, errors.New("no se encontró un usuario con rol de admin")
+        }
+        return nil, err
+    }
+
+    return &user, nil
 }

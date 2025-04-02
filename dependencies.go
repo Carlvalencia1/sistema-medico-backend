@@ -1,9 +1,9 @@
 package main
 
 import (
+	"smartvitals/src/core"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"smartvitals/src/core"
 
 	medicalcasesUseCases "smartvitals/src/feautures/cases/application"
 	medicalcasesInfrastructure "smartvitals/src/feautures/cases/infrastructure"
@@ -12,6 +12,10 @@ import (
 	patientsUseCases "smartvitals/src/feautures/patients/application"
 	patientsInfrastructure "smartvitals/src/feautures/patients/infraestructure"
 	patientsControllers "smartvitals/src/feautures/patients/infraestructure/controllers"
+
+	usersUseCases "smartvitals/src/feautures/users/application"
+	usersInfraestructure "smartvitals/src/feautures/users/infraestructure"
+	usersControllers "smartvitals/src/feautures/users/infraestructure/controllers"
 )
 
 type Dependencies struct {
@@ -26,7 +30,18 @@ func NewDependencies() *Dependencies {
 
 func (d *Dependencies) Run() error {
 	database := core.NewDatabase()
-
+/*
+	// Inicializar RabbitMQ (puede devolver nil si hay error)
+	var rabbitMQ *core.RabbitMQ
+	rabbitMQTmp, err := core.NewRabbitMQ()
+	if err != nil {
+		log.Printf("Advertencia: No se pudo conectar a RabbitMQ: %v", err)
+		// Continuamos con rabbitMQ = nil
+	} else {
+		rabbitMQ = rabbitMQTmp
+		// No uses defer rabbitMQ.Close() aquí, cerrará la conexión
+		// antes de que se use
+	} */
 	// Configuración de dependencias para casos médicos
 	medicalCaseDatabase := medicalcasesInfrastructure.NewMySQL(database.Conn)
 	getAllMedicalCaseUseCase := medicalcasesUseCases.NewGetAllUseCase(medicalCaseDatabase)
@@ -45,6 +60,16 @@ func (d *Dependencies) Run() error {
 		deleteMedicalCaseController,
 	)
 
+	/*findActiveCajaByEsp32UseCase := cajasUseCases.NewFindActiveCajaByEsp32UseCase(cajasDatabase)
+     // Crear el productor (funcionará incluso con rabbitMQ = nil)
+naranjaProducer := naranjasInfrastructure.NewProducer(rabbitMQ)
+
+	naranjaDatabase := naranjasInfrastructure.NewMySQL(database.Conn)
+	createNaranjaUseCase := naranjasUseCases.NewCreateNaranjaUseCase(
+		naranjaDatabase,
+		naranjaProducer,
+		findActiveCajaByEsp32UseCase, */
+	
 	// Configuración de dependencias para pacientes
 	patientsDatabase := patientsInfrastructure.NewMySQL(database.Conn)
 	getAllPatientsUseCase := patientsUseCases.NewGetAllPatientsUseCase(patientsDatabase)
@@ -63,6 +88,33 @@ func (d *Dependencies) Run() error {
 		deletePatientsController,
 	)
 
+	//configuracion de dependencias para usuarios
+	userDataBase := usersInfraestructure.NewMysql(database.Conn)
+	createUser :=  usersUseCases.NewSaveUser(userDataBase)
+	logInUser := usersUseCases.NewLogInUseCase(userDataBase)
+	createUserController := usersControllers.NewCreateUserController(createUser)
+	logInController := usersControllers.NewLoginController(logInUser)
+	userUpdate := usersUseCases.NewUpdateUserUseCase(userDataBase)
+	updateUserController := usersControllers.NewUpdateUserController(userUpdate)
+	deleteUserUseCase := usersUseCases.NewDeleteUserUsecase(userDataBase)
+	deleteUserController := usersControllers.NewDeleteUserController(deleteUserUseCase)
+	getUsersUseCase := usersUseCases.NewGetUsersUseCase(userDataBase)
+	getUsersController := usersControllers.NewGetUsersController(getUsersUseCase)
+	getUserByIdUseCase := usersUseCases.NewGetUserByIDUseCase(userDataBase)
+	getUserByIdController := usersControllers.NewGetUserByIdController(getUserByIdUseCase)
+	getUserByUsernameUseCase := usersUseCases.NewGetUserByUsernameUseCase(userDataBase)
+	getUserByUsernameController := usersControllers.NewGetByUsernameController(getUserByUsernameUseCase)
+	userRoutes := usersInfraestructure.NewUserRoutes(
+		d.engine,
+		createUserController,
+		logInController,
+		getUsersController,        // Este debe ir antes
+		updateUserController,
+		deleteUserController,
+		getUserByUsernameController,
+		getUserByIdController,
+	)
+
 	// Configuración de CORS
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:5173"}
@@ -75,6 +127,7 @@ func (d *Dependencies) Run() error {
 	// Configuración de rutas
 	medicalCasesRoutes.SetupRoutes()
 	patientsRoutes.SetupRoutes()
+	userRoutes.SetupRoutes()
 
 	return d.engine.Run(":8080")
 }
