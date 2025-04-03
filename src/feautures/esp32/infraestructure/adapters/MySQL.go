@@ -18,7 +18,7 @@ func NewMySQL(conn *sql.DB) *MySQL {
 
 func (misql *MySQL) Save(esp32 *entities.Esp32) (*entities.Esp32, error) {
 	// Prepare the SQL statement for inserting the ESP32 data
-	stmt, err := misql.conn.Prepare("INSERT INTO esp32 (id, id_propietario) VALUES (?, ?, ?)")
+	stmt, err := misql.conn.Prepare("INSERT INTO esp32 (id, id_propietario) VALUES (?, ?)")
 	if err != nil {
 		log.Printf("error preparing statement: %v", err)
 		return &entities.Esp32{}, err
@@ -36,7 +36,7 @@ func (misql *MySQL) Save(esp32 *entities.Esp32) (*entities.Esp32, error) {
 }
 
 func (misql *MySQL) GetByPropietario(id int) ([]entities.Esp32, error) {
-	rows, err := misql.conn.Query("SELECT id, nombre, id_propietario FROM esp32 WHERE id_propietario = ?", id)
+	rows, err := misql.conn.Query("SELECT id, id_propietario FROM esp32 WHERE id_propietario = ?", id)
 	if err != nil {
 		log.Printf("error executing query: %v", err)
 		return nil, err

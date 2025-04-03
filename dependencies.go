@@ -16,6 +16,11 @@ import (
 	usersUseCases "smartvitals/src/feautures/users/application"
 	usersInfraestructure "smartvitals/src/feautures/users/infraestructure"
 	usersControllers "smartvitals/src/feautures/users/infraestructure/controllers"
+
+	esp32UseCases "smartvitals/src/feautures/esp32/application"
+	esp32Infrastructure "smartvitals/src/feautures/esp32/infraestructure"
+	esp32Adapter "smartvitals/src/feautures/esp32/infraestructure/adapters"
+	esp32Controllers "smartvitals/src/feautures/esp32/infraestructure/controllers"
 )
 
 type Dependencies struct {
@@ -115,6 +120,15 @@ naranjaProducer := naranjasInfrastructure.NewProducer(rabbitMQ)
 		getUserByIdController,
 	)
 
+	esp32Database := esp32Adapter. NewMySQL(database.Conn)
+	createEsp32UseCase := esp32UseCases.NewSaveEsp32(esp32Database)
+	createEsp32Controller := esp32Controllers.NewCreateEsp32Controller(createEsp32UseCase)
+	getEsp32ByUsernameUseCase := esp32UseCases.NewGetEsp32ByOwnerIDUseCase(esp32Database)
+	getEsp32ByUsernameController := esp32Controllers.NewGetEsp32ByPropietarioController(getEsp32ByUsernameUseCase)
+	deleteEsp32UseCase := esp32UseCases.NewDeleteEsp32UseCase(esp32Database)
+	deleteEsp32Controller := esp32Controllers.NewDeleteEsp32Controller(deleteEsp32UseCase)
+	sp32Routes := esp32Infrastructure.NewEsp32Routes(d.engine, createEsp32Controller, getEsp32ByUsernameController, deleteEsp32Controller)
+
 	// Configuración de CORS
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:5173"}
@@ -128,6 +142,7 @@ naranjaProducer := naranjasInfrastructure.NewProducer(rabbitMQ)
 	medicalCasesRoutes.SetupRoutes()
 	patientsRoutes.SetupRoutes()
 	userRoutes.SetupRoutes()
+	sp32Routes.Run()
 
 	return d.engine.Run(":8080")
 }
