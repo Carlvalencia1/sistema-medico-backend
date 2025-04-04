@@ -8,3 +8,7 @@ type IPatients interface {
 	Delete(id int) error
 	GetByPatient(patientId int) ([]Patients, error)
 }
+
+type IPatientsProducer interface {
+	PublishPatients(patient Patients) error
+}

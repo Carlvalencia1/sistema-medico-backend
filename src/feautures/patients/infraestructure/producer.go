@@ -18,20 +18,17 @@ func NewProducer(rabbitMQ *core.RabbitMQ) *Producer {
 }
 
 func (p *Producer) PublishPatients(patient domain.Patients) error {
-	// Verificar si rabbitMQ es nil antes de usarlo
 	if p.rabbitMQ == nil {
 		log.Printf("Advertencia: RabbitMQ no está configurado, saltando publicación")
-		return nil // No consideramos esto un error fatal
+		return nil
 	}
 
-	// Convertir a JSON
 	jsonData, err := json.Marshal(patient)
 	if err != nil {
 		log.Printf("Error al convertir patient a JSON: %v", err)
 		return err
 	}
 
-	// Publicar usando la routing key correcta para patients
 	err = p.rabbitMQ.PublishMessage("multi.patients.data", jsonData)
 	if err != nil {
 		log.Printf("Error al publicar en RabbitMQ: %v", err)
