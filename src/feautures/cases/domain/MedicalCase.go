@@ -11,3 +11,5 @@ type MedicalCase struct {
 	RitmoCardiaco int       `json:"ritmo_cardiaco"`
 	FechaRegistro time.Time `json:"fecha_registro"`
 }
+
+

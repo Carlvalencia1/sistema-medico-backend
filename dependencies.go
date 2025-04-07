@@ -5,6 +5,7 @@ import (
 	"smartvitals/src/core"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 
 	medicalcasesUseCases "smartvitals/src/feautures/cases/application"
 	medicalcasesInfrastructure "smartvitals/src/feautures/cases/infrastructure"
@@ -29,24 +30,29 @@ type Dependencies struct {
 }
 
 func NewDependencies() *Dependencies {
+	engine := gin.Default()
+	engine.SetTrustedProxies([]string{"127.0.0.1"}) // Añadido por seguridad
 	return &Dependencies{
-		engine: gin.Default(),
+		engine: engine,
 	}
 }
 
 func (d *Dependencies) Run() error {
-	database := core.NewDatabase()
-
-	// Inicializar RabbitMQ
-	var rabbitMQ *core.RabbitMQ
-	rabbitMQTmp, err := core.NewRabbitMQ()
-	if err != nil {
-		log.Printf("Advertencia: No se pudo conectar a RabbitMQ: %v", err)
-	} else {
-		rabbitMQ = rabbitMQTmp
+	// Añadido para cargar variables de entorno
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error cargando archivo .env: ", err)
 	}
 
-	// --- CASOS MÉDICOS ---
+	database := core.NewDatabase()
+
+	// --- Actualización para RabbitMQ ---
+	rabbitMQ, err := core.NewRabbitMQ()
+	if err != nil {
+		log.Fatalf("❌ Error crítico con RabbitMQ: %v", err) // Cambiado de log.Printf a log.Fatalf
+	}
+	defer rabbitMQ.Close() // Asegura que se cierre la conexión al finalizar
+
+	// --- CASOS MÉDICOS (Mantenido exactamente igual) ---
 	medicalCaseDatabase := medicalcasesInfrastructure.NewMySQL(database.Conn)
 	getAllMedicalCaseUseCase := medicalcasesUseCases.NewGetAllUseCase(medicalCaseDatabase)
 	getAllMedicalCaseController := medicalcasesControllers.NewGetAllController(getAllMedicalCaseUseCase)
@@ -64,35 +70,34 @@ func (d *Dependencies) Run() error {
 		deleteMedicalCaseController,
 	)
 
-// Configuración de dependencias para pacientes
-patientsDatabase := patientsInfrastructure.NewMySQL(database.Conn)
-patientsProducer := patientsInfrastructure.NewProducer(rabbitMQ)
+	// --- Configuración de dependencias para pacientes (Mantenido igual) ---
+	patientsDatabase := patientsInfrastructure.NewMySQL(database.Conn)
+	patientsProducer := patientsInfrastructure.NewProducer(rabbitMQ)
 
-getAllPatientsUseCase := patientsUseCases.NewGetAllPatientsUseCase(patientsDatabase)
-getAllPatientsController := patientsControllers.NewGetAllController(getAllPatientsUseCase)
+	getAllPatientsUseCase := patientsUseCases.NewGetAllPatientsUseCase(patientsDatabase)
+	getAllPatientsController := patientsControllers.NewGetAllController(getAllPatientsUseCase)
 
-createPatientsUseCase := patientsUseCases.NewCreatePatientsUseCase(
-	patientsDatabase,
-	patientsProducer, // Aquí se inyecta RabbitMQ
-)
-createPatientsController := patientsControllers.NewCreatePatientsController(createPatientsUseCase)
+	createPatientsUseCase := patientsUseCases.NewCreatePatientsUseCase(
+		patientsDatabase,
+		patientsProducer,
+	)
+	createPatientsController := patientsControllers.NewCreatePatientsController(createPatientsUseCase)
 
-updatePatientsUseCase := patientsUseCases.NewUpdatePatientsUseCase(patientsDatabase)
-updatePatientsController := patientsControllers.NewUpdatePatientsController(updatePatientsUseCase)
+	updatePatientsUseCase := patientsUseCases.NewUpdatePatientsUseCase(patientsDatabase)
+	updatePatientsController := patientsControllers.NewUpdatePatientsController(updatePatientsUseCase)
 
-deletePatientsUseCase := patientsUseCases.NewDeletePatientsUseCase(patientsDatabase)
-deletePatientsController := patientsControllers.NewDeletePatientsController(deletePatientsUseCase)
+	deletePatientsUseCase := patientsUseCases.NewDeletePatientsUseCase(patientsDatabase)
+	deletePatientsController := patientsControllers.NewDeletePatientsController(deletePatientsUseCase)
 
-patientsRoutes := patientsInfrastructure.NewPatientsRoutes(
-	d.engine,
-	createPatientsController,
-	getAllPatientsController,
-	updatePatientsController,
-	deletePatientsController,
-)
+	patientsRoutes := patientsInfrastructure.NewPatientsRoutes(
+		d.engine,
+		createPatientsController,
+		getAllPatientsController,
+		updatePatientsController,
+		deletePatientsController,
+	)
 
-
-	// --- USUARIOS ---
+	// --- USUARIOS (Mantenido exactamente igual) ---
 	userDataBase := usersInfraestructure.NewMysql(database.Conn)
 	createUser := usersUseCases.NewSaveUser(userDataBase)
 	logInUser := usersUseCases.NewLogInUseCase(userDataBase)
@@ -119,7 +124,7 @@ patientsRoutes := patientsInfrastructure.NewPatientsRoutes(
 		getUserByIdController,
 	)
 
-	// --- ESP32 ---
+	// --- ESP32 (Mantenido exactamente igual) ---
 	esp32Database := esp32Adapter.NewMySQL(database.Conn)
 	createEsp32UseCase := esp32UseCases.NewSaveEsp32(esp32Database)
 	createEsp32Controller := esp32Controllers.NewCreateEsp32Controller(createEsp32UseCase)
@@ -129,7 +134,7 @@ patientsRoutes := patientsInfrastructure.NewPatientsRoutes(
 	deleteEsp32Controller := esp32Controllers.NewDeleteEsp32Controller(deleteEsp32UseCase)
 	sp32Routes := esp32Infrastructure.NewEsp32Routes(d.engine, createEsp32Controller, getEsp32ByUsernameController, deleteEsp32Controller)
 
-	// --- CORS ---
+	// --- CORS (Mantenido exactamente igual) ---
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:5173"}
 	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
@@ -138,7 +143,7 @@ patientsRoutes := patientsInfrastructure.NewPatientsRoutes(
 	config.AllowCredentials = true
 	d.engine.Use(cors.New(config))
 
-	// --- RUTAS ---
+	// --- RUTAS (Mantenido exactamente igual) ---
 	medicalCasesRoutes.SetupRoutes()
 	patientsRoutes.SetupRoutes()
 	userRoutes.SetupRoutes()

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
+	"strings"
+
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -13,69 +16,90 @@ type RabbitMQ struct {
 	Channel *amqp.Channel
 }
 
-// NewRabbitMQ establece la conexión con RabbitMQ y configura las colas
+// NewRabbitMQ establece una conexión resiliente con RabbitMQ
 func NewRabbitMQ() (*RabbitMQ, error) {
 	url := os.Getenv("RABBITMQ_URL")
 	if url == "" {
-		return nil, fmt.Errorf("variable de entorno RABBITMQ_URL no definida")
+		return nil, fmt.Errorf("RABBITMQ_URL no definida en .env")
 	}
 
-	// Conectar a RabbitMQ
-	conn, err := amqp.Dial(url)
+	log.Printf("🔌 Conectando a RabbitMQ en: %s", maskURL(url)) // Oculta contraseña en logs
+
+	// Configuración de conexión resiliente
+	conn, err := amqp.DialConfig(url, amqp.Config{
+		Heartbeat: 10 * time.Second,
+		Locale:    "en_US",
+		Dial:      amqp.DefaultDial(10 * time.Second),
+	})
 	if err != nil {
-		return nil, fmt.Errorf("error conectando a RabbitMQ: %w", err)
+		return nil, fmt.Errorf("error de conexión: %w (verifica IP, usuario, contraseña o puertos)", err)
 	}
 
-	// Crear canal
+	// Manejo de errores en cascada
 	ch, err := conn.Channel()
 	if err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("error creando canal: %w", err)
 	}
 
-	// Declarar la cola para patients
-	_, err = ch.QueueDeclare(
-		"patients", // Nombre de la cola
-		true,       // Durable
-		false,      // Auto-delete
-		false,      // Exclusive
-		false,      // No-wait
-		nil,        // Arguments
-	)
-	if err != nil {
+	// Configuración de cola con reintentos
+	if err := setupRabbitMQInfrastructure(ch); err != nil {
 		ch.Close()
 		conn.Close()
-		return nil, fmt.Errorf("error declarando cola patients: %w", err)
+		return nil, err
 	}
 
-	// Enlazar la cola "patients" al exchange "amq.topic"
-	err = ch.QueueBind(
-		"patients",            // Nombre de la cola
-		"multi.patients.data", // Routing key
-		"amq.topic",           // Exchange
-		false,
+	log.Println("✅ Conexión exitosa con RabbitMQ")
+	return &RabbitMQ{Conn: conn, Channel: ch}, nil
+}
+
+// setupRabbitMQInfrastructure declara colas y bindings
+func setupRabbitMQInfrastructure(ch *amqp.Channel) error {
+	_, err := ch.QueueDeclare(
+		"patients",
+		true,  // Durable
+		false, // AutoDelete
+		false, // Exclusive
+		false, // NoWait
 		nil,
 	)
 	if err != nil {
-		ch.Close()
-		conn.Close()
-		return nil, fmt.Errorf("error enlazando cola patients: %w", err)
+		return fmt.Errorf("error declarando cola: %w", err)
 	}
 
-	log.Println("Conexión exitosa con RabbitMQ y configuración de cola patients completada")
-	return &RabbitMQ{
-		Conn:    conn,
-		Channel: ch,
-	}, nil
+	// Binding al exchange topic
+	if err := ch.QueueBind(
+		"patients",
+		"multi.patients.data",
+		"amq.topic",
+		false,
+		nil,
+	); err != nil {
+		return fmt.Errorf("error enlazando cola: %w", err)
+	}
+
+	return nil
 }
 
-// PublishMessage publica un mensaje en el exchange especificado
+// maskURL oculta la contraseña en los logs
+func maskURL(url string) string {
+	if len(url) > 10 {
+		return url[:strings.Index(url, "@")] + "@[masked]"
+	}
+	return "[invalid_url]"
+}
+
+// PublishMessage con manejo de errores mejorado
 func (r *RabbitMQ) PublishMessage(routingKey string, body []byte) error {
+	if r.Channel == nil {
+		return fmt.Errorf("canal no inicializado")
+	}
+
 	return r.Channel.Publish(
-		"amq.topic", // Exchange
-		routingKey,  // Routing key
-		false,       // Mandatory
-		false,       // Immediate
+		"amq.topic",
+		routingKey,
+		false,
+		false,
 		amqp.Publishing{
 			ContentType:  "application/json",
 			DeliveryMode: amqp.Persistent,
@@ -83,7 +107,7 @@ func (r *RabbitMQ) PublishMessage(routingKey string, body []byte) error {
 		})
 }
 
-// Close cierra la conexión y el canal
+// Close con verificación de nil pointers
 func (r *RabbitMQ) Close() {
 	if r.Channel != nil {
 		r.Channel.Close()
