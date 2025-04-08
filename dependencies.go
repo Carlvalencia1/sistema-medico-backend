@@ -136,7 +136,7 @@ func (d *Dependencies) Run() error {
 
 	// --- CORS (Mantenido exactamente igual) ---
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:5173"}
+	config.AllowOrigins = []string{"http://100.28.173.85:5173"} //config de la ruta 
 	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	config.ExposeHeaders = []string{"Content-Length"}
