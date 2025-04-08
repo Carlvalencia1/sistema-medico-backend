@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"smartvitals/src/core"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -134,13 +135,26 @@ func (d *Dependencies) Run() error {
 	deleteEsp32Controller := esp32Controllers.NewDeleteEsp32Controller(deleteEsp32UseCase)
 	sp32Routes := esp32Infrastructure.NewEsp32Routes(d.engine, createEsp32Controller, getEsp32ByUsernameController, deleteEsp32Controller)
 
-	// --- CORS (Mantenido exactamente igual) ---
+	// --- CORS Configuration ---
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://100.28.173.85:5173"} //config de la ruta 
-	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	config.AllowOrigins = []string{
+		"http://100.28.173.85:5173",
+		"http://54.84.210.136",
+		"http://54.84.210.136:5173", // Include if you're using this port
+	}
+	config.AllowHeaders = []string{
+		"Origin",
+		"Content-Length",
+		"Content-Type",
+		"Authorization",
+		"Access-Control-Allow-Origin",
+		"Access-Control-Allow-Headers",
+	}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	config.ExposeHeaders = []string{"Content-Length"}
 	config.AllowCredentials = true
+
+	// Apply CORS middleware
 	d.engine.Use(cors.New(config))
 
 	// --- RUTAS (Mantenido exactamente igual) ---
