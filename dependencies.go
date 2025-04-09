@@ -139,8 +139,10 @@ func (d *Dependencies) Run() error {
 	// --- CORS Configuration ---
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{
-		"http://54.84.210.136",      // Your frontend origin
-		"http://100.28.173.85:8080", // Your backend origin
+		"http://54.84.210.136",      // Production frontend
+		"http://100.28.173.85:8080", // Production backend
+		"http://localhost:5173",     // Development frontend
+		"http://localhost:8080",     // Development backend
 	}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"}
 	config.AllowHeaders = []string{
@@ -155,7 +157,7 @@ func (d *Dependencies) Run() error {
 		"X-Requested-With",
 	}
 	config.ExposeHeaders = []string{"Content-Length"}
-	config.AllowCredentials = true // Enable credentials
+	config.AllowCredentials = true
 	config.MaxAge = 12 * time.Hour
 
 	// Apply CORS middleware
