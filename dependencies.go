@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"smartvitals/src/core"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -137,8 +138,8 @@ func (d *Dependencies) Run() error {
 
 	// --- CORS Configuration ---
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"*"} // Permite todos los orígenes
-	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+	config.AllowOrigins = []string{"*"}  // Permite todos los orígenes
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"}
 	config.AllowHeaders = []string{
 		"Origin",
 		"Content-Length",
@@ -147,12 +148,30 @@ func (d *Dependencies) Run() error {
 		"Access-Control-Allow-Origin",
 		"Access-Control-Allow-Headers",
 		"Access-Control-Allow-Methods",
+		"Accept",
+		"X-Requested-With",
 	}
 	config.ExposeHeaders = []string{"Content-Length"}
-	config.AllowCredentials = false // Debe ser false cuando AllowOrigins es "*"
+	config.AllowCredentials = false  // Debe ser false cuando AllowOrigins es "*"
+	config.MaxAge = 12 * time.Hour   // Tiempo de caché para las solicitudes preflight
 
 	// Apply CORS middleware
 	d.engine.Use(cors.New(config))
+
+	// También puedes agregar un middleware personalizado para las opciones CORS
+	d.engine.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "false")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Length, Content-Type, Authorization, Access-Control-Allow-Origin")
+		
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		
+		c.Next()
+	})
 
 	// --- RUTAS (Mantenido exactamente igual) ---
 	medicalCasesRoutes.SetupRoutes()
