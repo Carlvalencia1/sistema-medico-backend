@@ -137,11 +137,8 @@ func (d *Dependencies) Run() error {
 
 	// --- CORS Configuration ---
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{
-		"http://100.28.173.85:5173",
-		"http://54.84.210.136",
-		"http://54.84.210.136:5173", // Include if you're using this port
-	}
+	config.AllowOrigins = []string{"*"} // Permite todos los orígenes
+	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{
 		"Origin",
 		"Content-Length",
@@ -149,10 +146,10 @@ func (d *Dependencies) Run() error {
 		"Authorization",
 		"Access-Control-Allow-Origin",
 		"Access-Control-Allow-Headers",
+		"Access-Control-Allow-Methods",
 	}
-	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	config.ExposeHeaders = []string{"Content-Length"}
-	config.AllowCredentials = true
+	config.AllowCredentials = false // Debe ser false cuando AllowOrigins es "*"
 
 	// Apply CORS middleware
 	d.engine.Use(cors.New(config))
