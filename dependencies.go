@@ -4,6 +4,7 @@ import (
 	"log"
 	"smartvitals/src/core"
 	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -137,7 +138,10 @@ func (d *Dependencies) Run() error {
 
 	// --- CORS Configuration ---
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"*"}  // Permite todos los orígenes
+	config.AllowOrigins = []string{
+		"http://54.84.210.136",      // Your frontend origin
+		"http://100.28.173.85:8080", // Your backend origin
+	}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"}
 	config.AllowHeaders = []string{
 		"Origin",
@@ -151,25 +155,20 @@ func (d *Dependencies) Run() error {
 		"X-Requested-With",
 	}
 	config.ExposeHeaders = []string{"Content-Length"}
-	config.AllowCredentials = false  // Debe ser false cuando AllowOrigins es "*"
-	config.MaxAge = 12 * time.Hour   // Tiempo de caché para las solicitudes preflight
+	config.AllowCredentials = true // Enable credentials
+	config.MaxAge = 12 * time.Hour
 
 	// Apply CORS middleware
 	d.engine.Use(cors.New(config))
 
-	// También puedes agregar un middleware personalizado para las opciones CORS
-	d.engine.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "false")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Length, Content-Type, Authorization, Access-Control-Allow-Origin")
-		
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		
-		c.Next()
+	// Add OPTIONS handler for preflight requests
+	d.engine.OPTIONS("/*path", func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		c.Status(204)
 	})
 
 	// --- RUTAS (Mantenido exactamente igual) ---
